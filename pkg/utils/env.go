@@ -18,12 +18,12 @@ func GetEnv[T Env](key string, defaultValue string, required bool) T {
 		if required {
 			panic(fmt.Sprintf("env variable %s is required", key))
 		}
+
 		value = defaultValue
 	}
 
 	switch ptr := any(&val).(type) {
 	case *string:
-
 		*ptr = value
 	case *int:
 		target, err := strconv.Atoi(value)

@@ -1,0 +1,6 @@
+db:
+  path:
+  encryption:
+    type:
+    key:
+    algorithm:

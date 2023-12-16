@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS password(
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
