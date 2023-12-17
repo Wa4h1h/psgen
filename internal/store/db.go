@@ -76,15 +76,39 @@ func (d *Database) BatchInsertPassword(ctx context.Context, passwords []*Passwor
 		return fmt.Errorf("failed to batch insert passwords: %w", err)
 	}
 
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			panic(err.Error())
-		}
-	}()
+	sem := make(chan struct{}, 5)
+	targetDone := 0
+	done := make(chan struct{})
+	queryErr := make(chan error)
 
-	if err := tx.Commit(); err != nil {
-		panic(err.Error())
+	for i, pass := range passwords {
+		go func(workerPos int, sem chan struct{}, pass *Password) {
+			sem <- struct{}{}
+
+			err := d.InsertPassword(ctx, pass)
+			if err != nil {
+				queryErr <- fmt.Errorf("failed to execute batch inserts: %w", err)
+			}
+
+			<-sem
+			targetDone += 1
+			if targetDone == len(passwords) {
+				done <- struct{}{}
+			}
+		}(i, sem, pass)
 	}
 
-	return nil
+	select {
+	case <-done:
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("failed to execute batch inserts: %w", err)
+		}
+
+		return nil
+	case errQ := <-queryErr:
+		if err := tx.Rollback(); err != nil {
+			return fmt.Errorf("failed to execute batch inserts: %w with tx error: %w", errQ, err)
+		}
+		return fmt.Errorf("failed to execute batch inserts: %w", errQ)
+	}
 }
