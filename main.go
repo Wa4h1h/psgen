@@ -22,8 +22,10 @@ func main() {
 		}
 	}()
 
-	if err := d.BatchInsertPassword(context.Background(), []*store.Password{
-		{Key: "1", Value: "2"},
+	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+
+	if err := d.BatchInsertPassword(ctx, []*store.Password{
+		{Key: "1", Value: "1"},
 		{Key: "2", Value: "2"},
 		{Key: "3", Value: "3"},
 		{Key: "4", Value: "4"},
@@ -34,9 +36,10 @@ func main() {
 		{Key: "9", Value: "9"},
 		{Key: "10", Value: "10"},
 		{Key: "11", Value: "11"},
-		{Key: "12", Value: "12"},
+		{Key: "12", Value: "13"},
 		{Key: "13", Value: "13"},
-	}); err != nil {
+	}, 2); err != nil {
 		panic(err.Error())
 	}
+
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -70,45 +71,51 @@ func (d *Database) GetPasswordByKey(ctx context.Context, key string) (*Password,
 	return &pass, nil
 }
 
-func (d *Database) BatchInsertPassword(ctx context.Context, passwords []*Password) error {
+func (d *Database) BatchInsertPassword(ctx context.Context, passwords []*Password, batchSize int) error {
 	tx, err := d.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to batch insert passwords: %w", err)
 	}
 
-	sem := make(chan struct{}, 5)
-	targetDone := 0
+	var wg sync.WaitGroup
+	errTx := make(chan error)
 	done := make(chan struct{})
-	queryErr := make(chan error)
 
-	for i, pass := range passwords {
-		go func(workerPos int, sem chan struct{}, pass *Password) {
-			sem <- struct{}{}
-
-			err := d.InsertPassword(ctx, pass)
-			if err != nil {
-				queryErr <- fmt.Errorf("failed to execute batch inserts: %w", err)
+	for i := 0; i < len(passwords); i += batchSize {
+		passes := make([]*Password, 0)
+		for j := i; j <= i+batchSize-1 && j < len(passwords); j++ {
+			passes = append(passes, passwords[j])
+		}
+		wg.Add(1)
+		go func(errTx chan error, passes []*Password) {
+			defer wg.Done()
+			for _, pass := range passes {
+				if err := d.InsertPassword(ctx, pass); err != nil {
+					errTx <- fmt.Errorf("batch insert failed: %w", err)
+				}
 			}
-
-			<-sem
-			targetDone += 1
-			if targetDone == len(passwords) {
-				done <- struct{}{}
-			}
-		}(i, sem, pass)
+		}(errTx, passes)
 	}
 
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
 	select {
+	case errTxVal := <-errTx:
+		if err := tx.Rollback(); err != nil {
+			return fmt.Errorf("%w, rollback failed: %w", errTxVal, err)
+		}
+
+		return errTxVal
 	case <-done:
 		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("failed to execute batch inserts: %w", err)
+			return fmt.Errorf("tx commit failed: %w", err)
 		}
 
 		return nil
-	case errQ := <-queryErr:
-		if err := tx.Rollback(); err != nil {
-			return fmt.Errorf("failed to execute batch inserts: %w with tx error: %w", errQ, err)
-		}
-		return fmt.Errorf("failed to execute batch inserts: %w", errQ)
+
 	}
+
 }

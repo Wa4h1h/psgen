@@ -3,7 +3,7 @@ package generator
 import (
 	"flag"
 	"github.com/WadhahJemai/psgen/internal/store"
-	"github.com/WadhahJemai/psgen/pkg/utils"
+	utils2 "github.com/WadhahJemai/psgen/internal/utils"
 	"strings"
 )
 
@@ -32,7 +32,7 @@ func NewCli() *Cli {
 }
 
 func (c *Cli) ParseFlags() {
-	length := flag.Int("ln", utils.DefaultLength, "password length")
+	length := flag.Int("ln", utils2.DefaultLength, "password length")
 	upperCase := flag.Bool("u", false, "include upper cases")
 	digits := flag.Bool("d", false, "include numbers")
 	special := flag.Bool("s", false, "include special characters")
@@ -66,8 +66,8 @@ func (c *Cli) GeneratePassword() string {
 	var pass strings.Builder
 
 	for i := 0; i < c.flags.length; i++ {
-		char := utils.GetRandomInt(int64(targetBound))
-		charRandIndex := utils.GetRandomInt(int64(len(chars[char])) - 1)
+		char := utils2.GetRandomInt(int64(targetBound))
+		charRandIndex := utils2.GetRandomInt(int64(len(chars[char])) - 1)
 		pass.WriteString(chars[char][charRandIndex : charRandIndex+1])
 	}
 
