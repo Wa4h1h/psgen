@@ -7,13 +7,6 @@ import (
 	"strings"
 )
 
-var chars = []string{
-	"abcdefghijklmnopqrstuvwxyz",
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-	"~`!@#$%^&*()-_+={}[]|\\;:\"<>,./?",
-	"0123456789",
-}
-
 type Flags struct {
 	lowerCase bool
 	upperCase bool
@@ -49,18 +42,24 @@ func (c *Cli) ParseFlags() {
 }
 
 func (c *Cli) GeneratePassword() string {
+	chars := []string{
+		"abcdefghijklmnopqrstuvwxyz",
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+		"~`!@#$%^&*()-_+={}[]|\\;:\"<>,./?",
+		"0123456789",
+	}
 	targetBound := 0
 
 	if c.flags.upperCase {
-		targetBound += 1
+		targetBound++
 	}
 
 	if c.flags.digits {
-		targetBound += 1
+		targetBound++
 	}
 
 	if c.flags.special {
-		targetBound += 1
+		targetBound++
 	}
 
 	var pass strings.Builder

@@ -4,3 +4,7 @@ db:
     type:
     key:
     algorithm:
+cloud:
+  dropbox:
+    endpoint:
+    accessToken:
