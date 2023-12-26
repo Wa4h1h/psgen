@@ -2,12 +2,20 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"sync"
 )
 
+type Queries interface {
+	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
+	PrepareContext(context.Context, string) (*sql.Stmt, error)
+	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
+}
+
 func (d *Database) InsertPassword(ctx context.Context, password *Password) error {
-	_, err := d.DB.ExecContext(ctx, "INSERT INTO password (key,value) VALUES (?,?)", password.Key, password.Value)
+	_, err := d.queries.ExecContext(ctx, "INSERT INTO password (key,value) VALUES (?,?)", password.Key, password.Value)
 	if err != nil {
 		return fmt.Errorf("failed to insert password with key: %s: %w", password.Key, err)
 	}
@@ -18,7 +26,7 @@ func (d *Database) InsertPassword(ctx context.Context, password *Password) error
 func (d *Database) GetPasswordByKey(ctx context.Context, key string) (*Password, error) {
 	var pass Password
 
-	err := d.DB.QueryRowContext(ctx, "SELECT * FROM `password` WHERE `key`=?", key).Scan(&pass.Key, &pass.Value)
+	err := d.queries.QueryRowContext(ctx, "SELECT * FROM `password` WHERE `key`=?", key).Scan(&pass.Key, &pass.Value)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get password with key: %s: %w", key, err)
 	}
@@ -27,10 +35,12 @@ func (d *Database) GetPasswordByKey(ctx context.Context, key string) (*Password,
 }
 
 func (d *Database) BatchInsertPassword(ctx context.Context, passwords []*Password, batchSize int) error {
-	tx, err := d.DB.BeginTx(ctx, nil)
+	tx, err := d.queries.(*sql.DB).BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to batch insert passwords: %w", err)
 	}
+
+	d.setQueries(tx)
 
 	var wg sync.WaitGroup
 
