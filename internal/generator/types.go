@@ -2,7 +2,6 @@ package generator
 
 import (
 	"github.com/WadhahJemai/psgen/internal/store"
-	"time"
 )
 
 type GenFlags struct {
@@ -14,8 +13,13 @@ type GenFlags struct {
 }
 
 type Cli struct {
-	genFlagSet  *GenFlags
-	store       store.Store
-	key         string
-	execTimeout time.Duration
+	genFlagSet *GenFlags
+	config     *Config
+	store      store.Store
+}
+
+type Config struct {
+	EncKey      string `json:"enc_key"`
+	ExecTimeout uint   `json:"execution_timeout"`
+	DbPath      string `json:"db_path"`
 }

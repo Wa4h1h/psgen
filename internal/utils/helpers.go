@@ -4,8 +4,11 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"math/big"
+	"os"
 )
 
 func GetRandomInt(max int64) int64 {
@@ -19,8 +22,42 @@ func GetRandomInt(max int64) int64 {
 	return randInt.Int64()
 }
 
+func GetConfigBasePath() string {
+	var baseConfigFolder string
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+
+	baseConfigFolder = fmt.Sprintf("%s/%s", homeDir, ConfigBaseDirName)
+	if _, err := os.Stat(baseConfigFolder); err != nil {
+		errMk := os.Mkdir(baseConfigFolder, 0750)
+		if errMk != nil {
+			panic(errMk)
+		}
+	}
+
+	return baseConfigFolder
+}
+
+func GenerateNewRandomKey() (string, error) {
+	buf := make([]byte, 32)
+	_, err := rand.Read(buf)
+	if err != nil {
+		return "", fmt.Errorf("creating new key failed: %w", err)
+	}
+
+	return base64.StdEncoding.EncodeToString(buf), nil
+}
+
 func EncryptAES(str string, key string) (string, error) {
-	aesC, err := aes.NewCipher([]byte(key))
+	keyBytes, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return "", err
+	}
+
+	aesC, err := aes.NewCipher(keyBytes)
 	if err != nil {
 		return "", err
 	}
@@ -43,7 +80,12 @@ func EncryptAES(str string, key string) (string, error) {
 }
 
 func DecryptAES(str string, key string) (string, error) {
-	aesC, err := aes.NewCipher([]byte(key))
+	keyBytes, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return "", err
+	}
+
+	aesC, err := aes.NewCipher(keyBytes)
 	if err != nil {
 		panic(err.Error())
 	}

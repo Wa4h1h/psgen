@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-func NewCli(store store.Store, encKey string, execTimeout time.Duration) *Cli {
-	return &Cli{store: store, key: encKey, execTimeout: execTimeout}
+func NewCli(store store.Store, cfg *Config) *Cli {
+	return &Cli{store: store, config: cfg}
 }
 
 func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
@@ -44,7 +44,7 @@ func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
 			return err.Error()
 		}
 
-		return "Password successfully generated and stored"
+		return "Password successfully generated"
 	case "get":
 		if err := getSet.Parse(args); err != nil {
 			return err.Error()
@@ -113,12 +113,12 @@ func (c *Cli) GeneratePassword() error {
 		r := bufio.NewReader(os.Stdin)
 		key, _ := r.ReadString('\n')
 
-		encryptedPass, err := utils2.EncryptAES(generatedPass, c.key)
+		encryptedPass, err := utils2.EncryptAES(generatedPass, c.config.EncKey)
 		if err != nil {
 			return fmt.Errorf("password not saved. Failed encrypting the generated password: %w", err)
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), c.execTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.config.ExecTimeout)*time.Second)
 		defer cancel()
 
 		if err := c.store.InsertPassword(ctx,
@@ -131,7 +131,7 @@ func (c *Cli) GeneratePassword() error {
 }
 
 func (c *Cli) GetPassword(key string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.execTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.config.ExecTimeout)*time.Second)
 	defer cancel()
 	p, err := c.store.GetPasswordByKey(ctx, key)
 	if err != nil {
@@ -142,7 +142,7 @@ func (c *Cli) GetPassword(key string) (string, error) {
 		}
 	}
 
-	pass, err := utils2.DecryptAES(p.Value, c.key)
+	pass, err := utils2.DecryptAES(p.Value, c.config.EncKey)
 	if err != nil {
 		return "", err
 	}

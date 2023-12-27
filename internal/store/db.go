@@ -17,18 +17,17 @@ type Password struct {
 }
 
 type Database struct {
-	Q             *Queries
-	EncryptionKey string
-	execTimeout   time.Duration
+	Q           *Queries
+	execTimeout time.Duration
 }
 
-func NewDatabase(path string, encryptionKey string, timeout time.Duration) *Database {
+func NewDatabase(path string, timeout time.Duration) *Database {
 	d, err := sql.Open("sqlite3", path)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	return &Database{EncryptionKey: encryptionKey, Q: &Queries{dq: d}, execTimeout: timeout}
+	return &Database{Q: &Queries{dq: d}, execTimeout: timeout}
 }
 
 func (d *Database) Close() error {

@@ -5,20 +5,16 @@ import (
 	"fmt"
 	"github.com/WadhahJemai/psgen/internal/generator"
 	"github.com/WadhahJemai/psgen/internal/store"
-	"github.com/WadhahJemai/psgen/internal/utils"
 	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"time"
 )
 
-var (
-	DbPath        = utils.GetEnv[string](utils.DbPathVar, "psgen.db", false)
-	ExecTimeout   = utils.GetEnv[uint](utils.ExecTimeout, "5", false)
-	EncryptionKey = utils.GetEnv[string](utils.EncryptKeyVar, "", true)
-)
-
 func main() {
-	d := store.NewDatabase(DbPath, "EncryptionKey", time.Duration(ExecTimeout)*time.Second)
+
+	cfg := generator.LoadConfig()
+
+	d := store.NewDatabase(cfg.DbPath, time.Duration(cfg.ExecTimeout)*time.Second)
 	defer func() {
 		if err := d.Close(); err != nil {
 			panic(err.Error())
@@ -29,7 +25,7 @@ func main() {
 		panic(err.Error())
 	}
 
-	c := generator.NewCli(d.Q, EncryptionKey, time.Duration(ExecTimeout)*time.Second)
+	c := generator.NewCli(d.Q, cfg)
 	args := os.Args
 
 	if len(args) < 3 {
