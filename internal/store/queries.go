@@ -48,7 +48,7 @@ func (q *Queries) BatchInsertPassword(ctx context.Context, passwords []*Password
 		return fmt.Errorf("failed to batch insert passwords: %w", err)
 	}
 
-	q.withTx(tx)
+	qu := q.withTx(tx)
 
 	var wg sync.WaitGroup
 
@@ -66,7 +66,7 @@ func (q *Queries) BatchInsertPassword(ctx context.Context, passwords []*Password
 			defer wg.Done()
 
 			for _, pass := range passes {
-				if err := q.InsertPassword(ctx, pass); err != nil {
+				if err := qu.InsertPassword(ctx, pass); err != nil {
 					errTx <- fmt.Errorf("batch insert failed: %w", err)
 				}
 			}

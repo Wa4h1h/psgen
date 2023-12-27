@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-
 	cfg := generator.LoadConfig()
 
 	d := store.NewDatabase(cfg.DbPath, time.Duration(cfg.ExecTimeout)*time.Second)
