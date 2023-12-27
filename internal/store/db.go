@@ -17,21 +17,22 @@ type Password struct {
 }
 
 type Database struct {
-	queries     Queries
-	execTimeout time.Duration
+	Q             *Queries
+	EncryptionKey string
+	execTimeout   time.Duration
 }
 
-func NewDatabase(connStr string, timeout time.Duration) *Database {
-	d, err := sql.Open("sqlite3", connStr)
+func NewDatabase(path string, encryptionKey string, timeout time.Duration) *Database {
+	d, err := sql.Open("sqlite3", path)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	return &Database{queries: d, execTimeout: timeout}
+	return &Database{EncryptionKey: encryptionKey, Q: &Queries{dq: d}, execTimeout: timeout}
 }
 
 func (d *Database) Close() error {
-	if err := d.queries.(*sql.DB).Close(); err != nil {
+	if err := d.Q.dq.(*sql.DB).Close(); err != nil {
 		return fmt.Errorf("error while closing db: %w", err)
 	}
 
@@ -42,14 +43,10 @@ func (d *Database) InitSchema() error {
 	ctx, cancel := context.WithTimeout(context.Background(), d.execTimeout)
 	defer cancel()
 
-	_, err := d.queries.ExecContext(ctx, schema)
+	_, err := d.Q.dq.ExecContext(ctx, schema)
 	if err != nil {
 		return fmt.Errorf("failed to initlize database tables: %w", err)
 	}
 
 	return nil
-}
-
-func (d *Database) setQueries(q Queries) {
-	d.queries = q
 }

@@ -7,7 +7,7 @@ import (
 )
 
 type Env interface {
-	int | string | bool
+	uint | string | bool
 }
 
 func GetEnv[T Env](key string, defaultValue string, required bool) T {
@@ -25,13 +25,13 @@ func GetEnv[T Env](key string, defaultValue string, required bool) T {
 	switch ptr := any(&val).(type) {
 	case *string:
 		*ptr = value
-	case *int:
-		target, err := strconv.Atoi(value)
+	case *uint:
+		target, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
 			panic(fmt.Sprintf("env variable %s=%v can not be paresed to int", key, value))
 		}
 
-		*ptr = target
+		*ptr = uint(target)
 	case *bool:
 		target, err := strconv.ParseBool(value)
 		if err != nil {

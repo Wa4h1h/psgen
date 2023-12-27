@@ -7,15 +7,23 @@ import (
 	"sync"
 )
 
-type Queries interface {
+type DbCommon interface {
 	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 	PrepareContext(context.Context, string) (*sql.Stmt, error)
 	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
 	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
 }
 
-func (d *Database) InsertPassword(ctx context.Context, password *Password) error {
-	_, err := d.queries.ExecContext(ctx, "INSERT INTO password (key,value) VALUES (?,?)", password.Key, password.Value)
+type Queries struct {
+	dq DbCommon
+}
+
+func (q *Queries) withTx(tx *sql.Tx) *Queries {
+	return &Queries{dq: tx}
+}
+
+func (q *Queries) InsertPassword(ctx context.Context, password *Password) error {
+	_, err := q.dq.ExecContext(ctx, "INSERT INTO password (key,value) VALUES (?,?)", password.Key, password.Value)
 	if err != nil {
 		return fmt.Errorf("failed to insert password with key: %s: %w", password.Key, err)
 	}
@@ -23,10 +31,10 @@ func (d *Database) InsertPassword(ctx context.Context, password *Password) error
 	return nil
 }
 
-func (d *Database) GetPasswordByKey(ctx context.Context, key string) (*Password, error) {
+func (q *Queries) GetPasswordByKey(ctx context.Context, key string) (*Password, error) {
 	var pass Password
 
-	err := d.queries.QueryRowContext(ctx, "SELECT * FROM `password` WHERE `key`=?", key).Scan(&pass.Key, &pass.Value)
+	err := q.dq.QueryRowContext(ctx, "SELECT * FROM `password` WHERE `key`=?", key).Scan(&pass.Key, &pass.Value)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get password with key: %s: %w", key, err)
 	}
@@ -34,13 +42,13 @@ func (d *Database) GetPasswordByKey(ctx context.Context, key string) (*Password,
 	return &pass, nil
 }
 
-func (d *Database) BatchInsertPassword(ctx context.Context, passwords []*Password, batchSize int) error {
-	tx, err := d.queries.(*sql.DB).BeginTx(ctx, nil)
+func (q *Queries) BatchInsertPassword(ctx context.Context, passwords []*Password, batchSize int) error {
+	tx, err := q.dq.(*sql.DB).BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to batch insert passwords: %w", err)
 	}
 
-	d.setQueries(tx)
+	q.withTx(tx)
 
 	var wg sync.WaitGroup
 
@@ -58,7 +66,7 @@ func (d *Database) BatchInsertPassword(ctx context.Context, passwords []*Passwor
 			defer wg.Done()
 
 			for _, pass := range passes {
-				if err := d.InsertPassword(ctx, pass); err != nil {
+				if err := q.InsertPassword(ctx, pass); err != nil {
 					errTx <- fmt.Errorf("batch insert failed: %w", err)
 				}
 			}
