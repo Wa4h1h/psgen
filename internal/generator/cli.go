@@ -81,6 +81,7 @@ func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
 		if err := importFlagSet.Parse(args); err != nil {
 			return err.Error()
 		}
+
 		err := c.Import(*csvPath, *concurrentInserts, *withEncryption)
 		if err != nil {
 			if errors.Is(err, utils2.ErrMalformedCsv) {
