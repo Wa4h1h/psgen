@@ -22,4 +22,5 @@ type Config struct {
 	EncKey      string `json:"enc_key"`
 	ExecTimeout uint   `json:"execution_timeout"`
 	DbPath      string `json:"db_path"`
+	LogsPath    string `json:"logs_path"`
 }

@@ -1,7 +1,11 @@
 package utils
 
-const DefaultLength = 15
-const DefaultExecutionTimeout = 5
-const DbPath = "psgen.db"
-const ConfigPath = "config"
-const ConfigBaseDirName = ".psgen"
+const (
+	DefaultLength            = 15
+	DefaultExecutionTimeout  = 5
+	DefaultConcurrentInserts = 5
+	DbPath                   = "psgen.db"
+	ConfigPath               = "config"
+	ConfigBaseDirName        = ".psgen"
+	LogsPath                 = "logs"
+)
