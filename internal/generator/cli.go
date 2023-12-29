@@ -24,12 +24,17 @@ func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
 	upperCase := genFlagSet.Bool("u", false, "include upper cases")
 	digits := genFlagSet.Bool("d", false, "include numbers")
 	special := genFlagSet.Bool("s", false, "include special characters")
+
 	getFlagSet := flag.NewFlagSet("get", flag.ExitOnError)
 	key := getFlagSet.String("key", "", "password key")
+
 	importFlagSet := flag.NewFlagSet("import", flag.ExitOnError)
-	csvPath := importFlagSet.String("path", "./passess.csv", "csv path to import")
+	csvPath := importFlagSet.String("path", "", "csv path to import")
 	concurrentInserts := importFlagSet.Int("c", utils2.DefaultConcurrentInserts, "number of concurrent insert operations")
 	withEncryption := importFlagSet.Bool("enc", true, "encrypt passwords")
+
+	exportFlagSet := flag.NewFlagSet("export", flag.ExitOnError)
+	outPath := exportFlagSet.String("out", fmt.Sprintf("%s/passes_%s.csv", utils2.GetConfigBasePath(), time.Now().Format("2006-01-02 15:04:05")), "csv export path")
 
 	switch cmd {
 	case "gen":
@@ -77,6 +82,15 @@ func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
 
 		return pass
 	case "export":
+		if err := exportFlagSet.Parse(args); err != nil {
+			return err.Error()
+		}
+
+		if err := c.Export(*outPath); err != nil {
+			return err.Error()
+		}
+
+		return fmt.Sprintf("Passwords exported to %s", *outPath)
 	case "import":
 		if err := importFlagSet.Parse(args); err != nil {
 			return err.Error()
@@ -87,6 +101,7 @@ func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
 			if errors.Is(err, utils2.ErrMalformedCsv) {
 				return err.Error()
 			}
+
 			errW := c.config.WriteLogs([]byte(err.Error()))
 			if errW != nil {
 				panic(errW)
@@ -131,11 +146,14 @@ func (c *Cli) GeneratePassword() error {
 		if errI != nil {
 			return errI
 		}
+
 		targetIndex := toUseIndexes[index]
+
 		charIndex, errCI := utils2.GetRandomInt(int64(len(chars[targetIndex]) - 1))
 		if errCI != nil {
 			return errCI
 		}
+
 		_, err := pass.WriteString(chars[targetIndex][charIndex : charIndex+1])
 		if err != nil {
 			return fmt.Errorf("failed to generate password: %w", err)
@@ -201,7 +219,7 @@ func (c *Cli) Import(csvPath string, concurrency int, withEncryption bool) error
 	header := content[0:1]
 	body := content[1:]
 
-	if strings.ToLower(header[0][0]) != "key" && strings.ToLower(header[0][1]) != "password" {
+	if strings.ToLower(header[0][0]) != "key" && strings.ToLower(header[0][1]) != "value" {
 		return utils2.ErrMalformedCsv
 	}
 
@@ -226,6 +244,33 @@ func (c *Cli) Import(csvPath string, concurrency int, withEncryption bool) error
 	defer cancel()
 
 	if err := c.store.BatchInsertPassword(ctx, passwords, concurrency); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Cli) Export(path string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.config.ExecTimeout)*time.Second)
+	defer cancel()
+
+	p, err := c.store.GetAllPasswords(ctx)
+	if err != nil {
+		return err
+	}
+
+	header := []string{"Key", "Value"}
+	body := make([][]string, 0, len(p))
+
+	for _, pass := range p {
+		decPass, err := utils2.DecryptAES(pass.Value, c.config.EncKey)
+		if err != nil {
+			return err
+		}
+		body = append(body, []string{pass.Key, decPass})
+	}
+
+	if err := utils2.WriteToCsv(header, body, path, ';'); err != nil {
 		return err
 	}
 

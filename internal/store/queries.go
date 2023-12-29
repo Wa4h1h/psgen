@@ -42,6 +42,27 @@ func (q *Queries) GetPasswordByKey(ctx context.Context, key string) (*Password, 
 	return &pass, nil
 }
 
+func (q *Queries) GetAllPasswords(ctx context.Context) ([]*Password, error) {
+	rows, err := q.dq.QueryContext(ctx, "SELECT * FROM `password`")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all passwords: %w", err)
+	}
+	defer rows.Close()
+
+	passwords := make([]*Password, 0)
+
+	for rows.Next() {
+		var pass Password
+		if err := rows.Scan(&pass.Key, &pass.Value); err != nil {
+			return nil, fmt.Errorf("unmarshlling password error: %w", err)
+		}
+
+		passwords = append(passwords, &pass)
+	}
+
+	return passwords, nil
+}
+
 func (q *Queries) BatchInsertPassword(ctx context.Context, passwords []*Password, batchSize int) error {
 	tx, err := q.dq.(*sql.DB).BeginTx(ctx, nil)
 	if err != nil {
@@ -92,5 +113,4 @@ func (q *Queries) BatchInsertPassword(ctx context.Context, passwords []*Password
 
 		return nil
 	}
-
 }
