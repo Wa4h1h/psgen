@@ -1,6 +1,6 @@
 # PSGEN
 
-`psgen` is CLI app for local password management. You can generate passwords and optionally store them in a local SQLite database. The password db can be exported to a CSV file. Additionally a CSV file with passwords can be imported to the db. Stored passwords are encrypted using AES encryption.
+`psgen` is CLI tool for local password management. You can generate passwords and optionally store them in a local SQLite database. The password db can be exported to a CSV file. Additionally a CSV file with passwords can be imported to the db. Stored passwords are encrypted using AES encryption.
 
 ### Config
 psgen configuration and the sqlite db are both stored within ~/.psgen folder.\
