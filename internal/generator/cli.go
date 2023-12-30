@@ -22,7 +22,7 @@ func (c *Cli) PrintHelp() {
 	fmt.Println(`Usage: psgen <command> -[-]<flags>
 Commands:
 gen		generates a password
-get		retrieves a password from the local sqlite db and prints it out to stdout
+get		retrieves a password from the local sqlite db and prints it out
 export		exports the stored passwords from the local sqlite db to an csv file
 import		imports passwords from a csv file into the local sqlite db
 help		show help
