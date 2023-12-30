@@ -13,7 +13,7 @@ Configuration example:
     "logs_path":"/home_path/.psgen/logs"
 }
 ```
-enc_key: a base64 string representing a 32 byte long sequence\
+enc_key: a base64 string representing a sequence of 32 bytes\
 execution_timeout: max number of second, that a db operation can take\
 db_path: path of the sqlite db\
 logs_path: errors are stored in log files, that reside in /home_path/.psgen/logs folder
