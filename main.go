@@ -31,11 +31,11 @@ func main() {
 	args := os.Args
 
 	if len(args) < 2 {
-		fmt.Println("flags missing")
-		os.Exit(1)
+		c.PrintHelp()
+		os.Exit(0)
 	}
 
 	result := c.ExecuteCmd(args[1], args[2:]...)
 
-	fmt.Println(result)
+	fmt.Print(result)
 }

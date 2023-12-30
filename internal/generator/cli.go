@@ -8,7 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/WadhahJemai/psgen/internal/store"
-	utils2 "github.com/WadhahJemai/psgen/internal/utils"
+	"github.com/WadhahJemai/psgen/internal/utils"
 	"os"
 	"strings"
 	"time"
@@ -18,26 +18,33 @@ func NewCli(store store.Store, cfg *Config) *Cli {
 	return &Cli{store: store, config: cfg}
 }
 
+func (c *Cli) PrintHelp() {
+	fmt.Println("Usage: psgen <command> -[-]<flags>")
+	fmt.Println("Commands:")
+	fmt.Println("gen		generates a password")
+	fmt.Println("get		retrieves a password from the local sqlite db and prints it out to stdout")
+	fmt.Println("export		exports the stored passwords from the local sqlite db to an csv file")
+	fmt.Println("import		imports passwords from a csv file into the local sqlite db")
+	fmt.Println("help		show help\n")
+	fmt.Println("Use psgen <command> -h or --help for more information about a command.")
+}
+
 func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
-	genFlagSet := flag.NewFlagSet("gen", flag.ExitOnError)
-	length := genFlagSet.Int("ln", utils2.DefaultLength, "password length")
-	upperCase := genFlagSet.Bool("u", false, "include upper cases")
-	digits := genFlagSet.Bool("d", false, "include numbers")
-	special := genFlagSet.Bool("s", false, "include special characters")
-
-	getFlagSet := flag.NewFlagSet("get", flag.ExitOnError)
-	key := getFlagSet.String("key", "", "password key")
-
-	importFlagSet := flag.NewFlagSet("import", flag.ExitOnError)
-	csvPath := importFlagSet.String("path", "", "csv path to import")
-	concurrentInserts := importFlagSet.Int("c", utils2.DefaultConcurrentInserts, "number of concurrent insert operations")
-	withEncryption := importFlagSet.Bool("enc", true, "encrypt passwords")
-
-	exportFlagSet := flag.NewFlagSet("export", flag.ExitOnError)
-	outPath := exportFlagSet.String("out", fmt.Sprintf("%s/passes_%s.csv", utils2.GetConfigBasePath(), time.Now().Format("2006-01-02 15:04:05")), "csv export path")
+	var (
+		genFlagSet    *flag.FlagSet
+		getFlagSet    *flag.FlagSet
+		exportFlagSet *flag.FlagSet
+		importFlagSet *flag.FlagSet
+	)
 
 	switch cmd {
 	case "gen":
+		genFlagSet = flag.NewFlagSet("gen", flag.ExitOnError)
+		length := genFlagSet.Int("ln", utils.DefaultLength, "password length")
+		upperCase := genFlagSet.Bool("u", false, "include upper cases")
+		digits := genFlagSet.Bool("d", false, "include numbers")
+		special := genFlagSet.Bool("s", false, "include special characters")
+
 		if err := genFlagSet.Parse(args); err != nil {
 			return err.Error()
 		}
@@ -62,8 +69,23 @@ func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
 
 		return "Password successfully generated"
 	case "get":
+		getFlagSet = flag.NewFlagSet("get", flag.ExitOnError)
+		key := getFlagSet.String("key", "", "password key")
+
 		if err := getFlagSet.Parse(args); err != nil {
 			return err.Error()
+		}
+
+		if len(*key) == 0 {
+			getFlagSet.Usage = func() {
+				fmt.Println("Missing flags")
+				fmt.Println("Usage of get:")
+				getFlagSet.PrintDefaults()
+			}
+
+			getFlagSet.Usage()
+
+			return ""
 		}
 
 		pass, err := c.GetPassword(*key)
@@ -82,6 +104,9 @@ func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
 
 		return pass
 	case "export":
+		exportFlagSet = flag.NewFlagSet("export", flag.ExitOnError)
+		outPath := exportFlagSet.String("out", fmt.Sprintf("%s/keys.csv", utils.GetConfigBasePath()), "csv export path")
+
 		if err := exportFlagSet.Parse(args); err != nil {
 			return err.Error()
 		}
@@ -92,13 +117,30 @@ func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
 
 		return fmt.Sprintf("Passwords exported to %s", *outPath)
 	case "import":
+		importFlagSet = flag.NewFlagSet("import", flag.ExitOnError)
+		csvPath := importFlagSet.String("path", "", "csv path to import (required)")
+		concurrentInserts := importFlagSet.Int("c", utils.DefaultConcurrentInserts, "number of concurrent insert operations")
+		withEncryption := importFlagSet.Bool("enc", true, "encrypt passwords")
+
 		if err := importFlagSet.Parse(args); err != nil {
 			return err.Error()
 		}
 
+		if len(*csvPath) == 0 {
+			importFlagSet.Usage = func() {
+				fmt.Println("Missing flags")
+				fmt.Println("Usage of import:")
+				importFlagSet.PrintDefaults()
+			}
+
+			importFlagSet.Usage()
+
+			return ""
+		}
+
 		err := c.Import(*csvPath, *concurrentInserts, *withEncryption)
 		if err != nil {
-			if errors.Is(err, utils2.ErrMalformedCsv) {
+			if errors.Is(err, utils.ErrMalformedCsv) {
 				return err.Error()
 			}
 
@@ -111,9 +153,11 @@ func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
 		}
 
 		return "CSV was successfully imported"
-	}
+	default:
+		c.PrintHelp()
 
-	return "unknown command"
+		return ""
+	}
 }
 
 func (c *Cli) GeneratePassword() error {
@@ -142,14 +186,14 @@ func (c *Cli) GeneratePassword() error {
 	var pass strings.Builder
 
 	for i := 0; i < c.genFlagSet.length; i++ {
-		index, errI := utils2.GetRandomInt(int64(len(toUseIndexes) - 1))
+		index, errI := utils.GetRandomInt(int64(len(toUseIndexes) - 1))
 		if errI != nil {
 			return errI
 		}
 
 		targetIndex := toUseIndexes[index]
 
-		charIndex, errCI := utils2.GetRandomInt(int64(len(chars[targetIndex]) - 1))
+		charIndex, errCI := utils.GetRandomInt(int64(len(chars[targetIndex]) - 1))
 		if errCI != nil {
 			return errCI
 		}
@@ -176,7 +220,7 @@ func (c *Cli) GeneratePassword() error {
 		r := bufio.NewReader(os.Stdin)
 		key, _ := r.ReadString('\n')
 
-		encryptedPass, err := utils2.EncryptAES(generatedPass, c.config.EncKey)
+		encryptedPass, err := utils.EncryptAES(generatedPass, c.config.EncKey)
 		if err != nil {
 			return fmt.Errorf("password not saved. Failed encrypting the generated password: %w", err)
 		}
@@ -202,7 +246,7 @@ func (c *Cli) GetPassword(key string) (string, error) {
 		return "", err
 	}
 
-	pass, err := utils2.DecryptAES(p.Value, c.config.EncKey)
+	pass, err := utils.DecryptAES(p.Value, c.config.EncKey)
 	if err != nil {
 		return "", err
 	}
@@ -211,7 +255,7 @@ func (c *Cli) GetPassword(key string) (string, error) {
 }
 
 func (c *Cli) Import(csvPath string, concurrency int, withEncryption bool) error {
-	content, err := utils2.ReadAllCsv(csvPath, ';')
+	content, err := utils.ReadAllCsv(csvPath, ';')
 	if err != nil {
 		return err
 	}
@@ -220,14 +264,14 @@ func (c *Cli) Import(csvPath string, concurrency int, withEncryption bool) error
 	body := content[1:]
 
 	if strings.ToLower(header[0][0]) != "key" && strings.ToLower(header[0][1]) != "value" {
-		return utils2.ErrMalformedCsv
+		return utils.ErrMalformedCsv
 	}
 
 	passwords := make([]*store.Password, 0, len(content[1:]))
 
 	if withEncryption {
 		for _, row := range body {
-			encPass, err := utils2.EncryptAES(row[1], c.config.EncKey)
+			encPass, err := utils.EncryptAES(row[1], c.config.EncKey)
 			if err != nil {
 				return err
 			}
@@ -263,14 +307,14 @@ func (c *Cli) Export(path string) error {
 	body := make([][]string, 0, len(p))
 
 	for _, pass := range p {
-		decPass, err := utils2.DecryptAES(pass.Value, c.config.EncKey)
+		decPass, err := utils.DecryptAES(pass.Value, c.config.EncKey)
 		if err != nil {
 			return err
 		}
 		body = append(body, []string{pass.Key, decPass})
 	}
 
-	if err := utils2.WriteToCsv(header, body, path, ';'); err != nil {
+	if err := utils.WriteToCsv(header, body, path, ';'); err != nil {
 		return err
 	}
 
