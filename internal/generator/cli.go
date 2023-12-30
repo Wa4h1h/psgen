@@ -19,14 +19,16 @@ func NewCli(store store.Store, cfg *Config) *Cli {
 }
 
 func (c *Cli) PrintHelp() {
-	fmt.Println("Usage: psgen <command> -[-]<flags>")
-	fmt.Println("Commands:")
-	fmt.Println("gen		generates a password")
-	fmt.Println("get		retrieves a password from the local sqlite db and prints it out to stdout")
-	fmt.Println("export		exports the stored passwords from the local sqlite db to an csv file")
-	fmt.Println("import		imports passwords from a csv file into the local sqlite db")
-	fmt.Println("help		show help\n")
-	fmt.Println("Use psgen <command> -h or --help for more information about a command.")
+	fmt.Println(`Usage: psgen <command> -[-]<flags>
+Commands:
+gen		generates a password
+get		retrieves a password from the local sqlite db and prints it out to stdout
+export		exports the stored passwords from the local sqlite db to an csv file
+import		imports passwords from a csv file into the local sqlite db
+help		show help
+
+Use psgen <command> -h or --help for more information about a command.`)
+
 }
 
 func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
