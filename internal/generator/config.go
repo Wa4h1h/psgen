@@ -68,6 +68,7 @@ func LoadConfig() (*Config, error) {
 
 func (c *Config) WriteLogs(bytes []byte) error {
 	logFile := fmt.Sprintf("%s/logs_%s.log", c.LogsPath, time.Now().Format("2006-01-02 15:04:05"))
+
 	logs, err := os.OpenFile(logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("opening log file error: %w", err)
