@@ -155,7 +155,7 @@ func (c *Cli) executeImport(args ...string) string {
 	return "CSV was successfully imported"
 }
 
-func (c *Cli) setDebugLevel() {
+func (c *Cli) setLogErrOption() {
 	val, ok := os.LookupEnv("PSGEN_ERR_LOGS")
 	if !ok {
 		c.debug = false
@@ -170,7 +170,8 @@ func (c *Cli) setDebugLevel() {
 }
 
 func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
-	c.setDebugLevel()
+	c.setLogErrOption()
+
 	switch cmd {
 	case "gen":
 		return c.executeGen(args...)
