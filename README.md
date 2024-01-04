@@ -16,7 +16,12 @@ Configuration example:
 enc_key: a base64 string representing a sequence of 32 bytes\
 execution_timeout: max number of second, that a db operation can take\
 db_path: path of the sqlite db\
-logs_path: errors are stored in log files, that resides in /home_path/.psgen/logs folder
+logs_path: errors are stored in log files, that resides in /home_path/.psgen/logs folder\
+
+To display errors within the current shell, PSGEN_ERR_LOGS environment variable must be exported
+```bash
+$ export PSGEN_ERR_LOGS=true
+```
 ### Example
 ```bash
 $ go run main.go gen -s  -d -ln=25
