@@ -10,6 +10,7 @@ import (
 	"github.com/WadhahJemai/psgen/internal/store"
 	"github.com/WadhahJemai/psgen/internal/utils"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -19,7 +20,7 @@ func NewCli(store store.Store, cfg *Config) *Cli {
 }
 
 func (c *Cli) PrintHelp() {
-	fmt.Println(`Usage: psgen <command> -[-]<flags>
+	fmt.Println(`Usage: psgen <command> -[-]<flags> [-[-]debug]
 Commands:
 gen		generates a password
 get		retrieves a password from the local sqlite db and prints it out
@@ -31,130 +32,154 @@ Use psgen <command> -h or --help for more information about a command.`)
 
 }
 
-func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
-	var (
-		genFlagSet    *flag.FlagSet
-		getFlagSet    *flag.FlagSet
-		exportFlagSet *flag.FlagSet
-		importFlagSet *flag.FlagSet
-	)
+func (c *Cli) formatError(msg string, err error) string {
+	if c.debug {
+		msg = fmt.Sprintf("%s: %s", msg, err.Error())
+	}
 
+	errW := c.config.WriteLogs([]byte(err.Error()))
+	if errW != nil {
+		panic(errW)
+	}
+
+	return msg
+}
+
+func (c *Cli) executeGen(args ...string) string {
+	genFlagSet := flag.NewFlagSet("gen", flag.ExitOnError)
+	length := genFlagSet.Int("ln", utils.DefaultLength, "password length")
+	upperCase := genFlagSet.Bool("u", false, "include upper cases")
+	digits := genFlagSet.Bool("d", false, "include numbers")
+	special := genFlagSet.Bool("s", false, "include special characters")
+
+	if err := genFlagSet.Parse(args); err != nil {
+		return err.Error()
+	}
+
+	c.genFlagSet = &GenFlags{
+		lowerCase: true,
+		upperCase: *upperCase,
+		digits:    *digits,
+		special:   *special,
+		length:    *length,
+	}
+
+	if err := c.GeneratePassword(); err != nil {
+		return c.formatError("Error while saving password", err)
+	}
+
+	return "Password successfully generated"
+}
+
+func (c *Cli) executeGet(args ...string) string {
+	getFlagSet := flag.NewFlagSet("get", flag.ExitOnError)
+	key := getFlagSet.String("key", "", "password key")
+	debug := getFlagSet.Bool("debug", false, "show error logs")
+
+	if err := getFlagSet.Parse(args); err != nil {
+		return err.Error()
+	}
+
+	c.debug = *debug
+
+	if len(*key) == 0 {
+		getFlagSet.Usage = func() {
+			fmt.Println("Missing flags")
+			fmt.Println("Usage of get:")
+			getFlagSet.PrintDefaults()
+		}
+
+		getFlagSet.Usage()
+
+		return ""
+	}
+
+	pass, err := c.GetPassword(*key)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Sprintf("password with key %s is not present", *key)
+		}
+
+		return c.formatError(fmt.Sprintf("Error while retrieving password with key %s", *key), err)
+	}
+
+	return pass
+}
+
+func (c *Cli) executeExport(args ...string) string {
+	exportFlagSet := flag.NewFlagSet("export", flag.ExitOnError)
+	outPath := exportFlagSet.String("out", fmt.Sprintf("%s/keys.csv", utils.GetConfigBasePath()), "csv export path")
+
+	if err := exportFlagSet.Parse(args); err != nil {
+		return err.Error()
+	}
+
+	if err := c.Export(*outPath); err != nil {
+		return c.formatError("Error while exporting passwords", err)
+	}
+
+	return fmt.Sprintf("Passwords exported to %s", *outPath)
+}
+
+func (c *Cli) executeImport(args ...string) string {
+	importFlagSet := flag.NewFlagSet("import", flag.ExitOnError)
+	csvPath := importFlagSet.String("path", "", "csv path to import (required)")
+	concurrentInserts := importFlagSet.Int("c", utils.DefaultConcurrentInserts, "number of concurrent insert operations")
+	withEncryption := importFlagSet.Bool("enc", true, "encrypt passwords")
+
+	if err := importFlagSet.Parse(args); err != nil {
+		return err.Error()
+	}
+
+	if len(*csvPath) == 0 {
+		importFlagSet.Usage = func() {
+			fmt.Println("Missing flags")
+			fmt.Println("Usage of import:")
+			importFlagSet.PrintDefaults()
+		}
+
+		importFlagSet.Usage()
+
+		return ""
+	}
+
+	err := c.Import(*csvPath, *concurrentInserts, *withEncryption)
+	if err != nil {
+		if errors.Is(err, utils.ErrMalformedCsv) {
+			return err.Error()
+		}
+
+		return c.formatError("Error while importing CSV", err)
+	}
+
+	return "CSV was successfully imported"
+}
+
+func (c *Cli) setDebugLevel() {
+	val, ok := os.LookupEnv("PSGEN_ERR_LOGS")
+	if !ok {
+		c.debug = false
+	} else {
+		parsedVal, err := strconv.ParseBool(val)
+		if err != nil {
+			panic(fmt.Sprintf("Error while parsing env variable PSGEN_ERR_LOGS=%s", val))
+		}
+
+		c.debug = parsedVal
+	}
+}
+
+func (c *Cli) ExecuteCmd(cmd string, args ...string) string {
+	c.setDebugLevel()
 	switch cmd {
 	case "gen":
-		genFlagSet = flag.NewFlagSet("gen", flag.ExitOnError)
-		length := genFlagSet.Int("ln", utils.DefaultLength, "password length")
-		upperCase := genFlagSet.Bool("u", false, "include upper cases")
-		digits := genFlagSet.Bool("d", false, "include numbers")
-		special := genFlagSet.Bool("s", false, "include special characters")
-
-		if err := genFlagSet.Parse(args); err != nil {
-			return err.Error()
-		}
-
-		c.genFlagSet = &GenFlags{
-			lowerCase: true,
-			upperCase: *upperCase,
-			digits:    *digits,
-			special:   *special,
-			length:    *length,
-		}
-
-		err := c.GeneratePassword()
-		if err != nil {
-			errW := c.config.WriteLogs([]byte(err.Error()))
-			if errW != nil {
-				panic(errW)
-			}
-
-			return "Error while saving password"
-		}
-
-		return "Password successfully generated"
+		return c.executeGen(args...)
 	case "get":
-		getFlagSet = flag.NewFlagSet("get", flag.ExitOnError)
-		key := getFlagSet.String("key", "", "password key")
-
-		if err := getFlagSet.Parse(args); err != nil {
-			return err.Error()
-		}
-
-		if len(*key) == 0 {
-			getFlagSet.Usage = func() {
-				fmt.Println("Missing flags")
-				fmt.Println("Usage of get:")
-				getFlagSet.PrintDefaults()
-			}
-
-			getFlagSet.Usage()
-
-			return ""
-		}
-
-		pass, err := c.GetPassword(*key)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return fmt.Sprintf("password with key %s is not present", *key)
-			}
-
-			errW := c.config.WriteLogs([]byte(err.Error()))
-			if errW != nil {
-				panic(errW)
-			}
-
-			return fmt.Sprintf("Error while retrieving password with key %s", *key)
-		}
-
-		return pass
+		return c.executeGet(args...)
 	case "export":
-		exportFlagSet = flag.NewFlagSet("export", flag.ExitOnError)
-		outPath := exportFlagSet.String("out", fmt.Sprintf("%s/keys.csv", utils.GetConfigBasePath()), "csv export path")
-
-		if err := exportFlagSet.Parse(args); err != nil {
-			return err.Error()
-		}
-
-		if err := c.Export(*outPath); err != nil {
-			return err.Error()
-		}
-
-		return fmt.Sprintf("Passwords exported to %s", *outPath)
+		return c.executeExport(args...)
 	case "import":
-		importFlagSet = flag.NewFlagSet("import", flag.ExitOnError)
-		csvPath := importFlagSet.String("path", "", "csv path to import (required)")
-		concurrentInserts := importFlagSet.Int("c", utils.DefaultConcurrentInserts, "number of concurrent insert operations")
-		withEncryption := importFlagSet.Bool("enc", true, "encrypt passwords")
-
-		if err := importFlagSet.Parse(args); err != nil {
-			return err.Error()
-		}
-
-		if len(*csvPath) == 0 {
-			importFlagSet.Usage = func() {
-				fmt.Println("Missing flags")
-				fmt.Println("Usage of import:")
-				importFlagSet.PrintDefaults()
-			}
-
-			importFlagSet.Usage()
-
-			return ""
-		}
-
-		err := c.Import(*csvPath, *concurrentInserts, *withEncryption)
-		if err != nil {
-			if errors.Is(err, utils.ErrMalformedCsv) {
-				return err.Error()
-			}
-
-			errW := c.config.WriteLogs([]byte(err.Error()))
-			if errW != nil {
-				panic(errW)
-			}
-
-			return "Error while importing CSV"
-		}
-
-		return "CSV was successfully imported"
+		return c.executeImport(args...)
 	default:
 		c.PrintHelp()
 

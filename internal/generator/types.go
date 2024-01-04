@@ -14,6 +14,7 @@ type GenFlags struct {
 
 type Cli struct {
 	genFlagSet *GenFlags
+	debug      bool
 	config     *Config
 	store      store.Store
 }
