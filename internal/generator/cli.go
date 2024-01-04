@@ -33,7 +33,7 @@ Use psgen <command> -h or --help for more information about a command.`)
 }
 
 func (c *Cli) formatError(msg string, err error) string {
-	if c.debug {
+	if c.logError {
 		msg = fmt.Sprintf("%s: %s", msg, err.Error())
 	}
 
@@ -74,13 +74,10 @@ func (c *Cli) executeGen(args ...string) string {
 func (c *Cli) executeGet(args ...string) string {
 	getFlagSet := flag.NewFlagSet("get", flag.ExitOnError)
 	key := getFlagSet.String("key", "", "password key")
-	debug := getFlagSet.Bool("debug", false, "show error logs")
 
 	if err := getFlagSet.Parse(args); err != nil {
 		return err.Error()
 	}
-
-	c.debug = *debug
 
 	if len(*key) == 0 {
 		getFlagSet.Usage = func() {
@@ -158,14 +155,14 @@ func (c *Cli) executeImport(args ...string) string {
 func (c *Cli) setLogErrOption() {
 	val, ok := os.LookupEnv("PSGEN_ERR_LOGS")
 	if !ok {
-		c.debug = false
+		c.logError = false
 	} else {
 		parsedVal, err := strconv.ParseBool(val)
 		if err != nil {
 			panic(fmt.Sprintf("Error while parsing env variable PSGEN_ERR_LOGS=%s", val))
 		}
 
-		c.debug = parsedVal
+		c.logError = parsedVal
 	}
 }
 
