@@ -44,13 +44,3 @@ func GetConfigBasePath() string {
 
 	return baseConfigFolder
 }
-
-func CheckValInSlice[T comparable](value T, vSlice []T) bool {
-	for _, val := range vSlice {
-		if val == value {
-			return true
-		}
-	}
-
-	return false
-}
