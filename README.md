@@ -61,6 +61,12 @@ GOARCH=amd64 GOOS=linux go build -o ./builds/linux/psgen main.go
 ```
 2) run the binary
 ```bash
-$ cd builds
+$ cd builds/darwin
 $ ./psgen <command> -[-]<flags>
 ```
+```bash
+$ cd builds/linux
+$ ./psgen <command> -[-]<flags>
+```
+## NOTE
+I was only interested in the concepts of CLI applications, flag parsing in Go and how to implement them, so I skipped the tests implementation and code clean-up. 
