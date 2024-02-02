@@ -69,4 +69,4 @@ $ cd builds/linux
 $ ./psgen <command> -[-]<flags>
 ```
 ## NOTE
-I was only interested in the concepts of CLI applications, flag parsing in Go and how to implement them, so I skipped the tests implementation and code clean-up. 
+I was only interested in the concepts of CLI applications, flag parsing in Go and how to implement them, so I skipped the tests implementation and code clean-up.

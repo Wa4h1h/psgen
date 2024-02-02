@@ -1,7 +1,7 @@
 package generator
 
 import (
-	"github.com/WadhahJemai/psgen/internal/store"
+	"github.com/Wa4h1h/psgen/internal/store"
 )
 
 type GenFlags struct {

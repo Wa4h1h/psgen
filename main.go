@@ -3,8 +3,8 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"github.com/WadhahJemai/psgen/internal/generator"
-	"github.com/WadhahJemai/psgen/internal/store"
+	"github.com/Wa4h1h/psgen/internal/generator"
+	"github.com/Wa4h1h/psgen/internal/store"
 	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"time"

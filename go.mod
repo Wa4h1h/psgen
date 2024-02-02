@@ -1,4 +1,4 @@
-module github.com/WadhahJemai/psgen
+module github.com/Wa4h1h/psgen
 
 go 1.21.3
 

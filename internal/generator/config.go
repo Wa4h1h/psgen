@@ -3,7 +3,7 @@ package generator
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/WadhahJemai/psgen/internal/utils"
+	"github.com/Wa4h1h/psgen/internal/utils"
 	"os"
 	"time"
 )
