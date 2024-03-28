@@ -20,7 +20,7 @@ func GetRandomInt(max int64) (int64, error) {
 
 func CreateFolder(path string) error {
 	if _, err := os.Stat(path); err != nil {
-		errMk := os.Mkdir(path, 0750)
+		errMk := os.Mkdir(path, 0o750)
 		if errMk != nil {
 			return fmt.Errorf("failed creating folder with path %s: %w", path, errMk)
 		}

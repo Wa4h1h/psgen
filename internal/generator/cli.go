@@ -7,12 +7,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/Wa4h1h/psgen/internal/store"
-	"github.com/Wa4h1h/psgen/internal/utils"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Wa4h1h/psgen/internal/store"
+	"github.com/Wa4h1h/psgen/internal/utils"
 )
 
 func NewCli(store store.Store, cfg *Config) *Cli {
@@ -20,7 +21,7 @@ func NewCli(store store.Store, cfg *Config) *Cli {
 }
 
 func (c *Cli) PrintHelp() {
-	fmt.Println(`Usage: psgen <command> -[-]<flags> [-[-]debug]
+	fmt.Println(`Usage: psgen <command> -[-]<flags>
 Commands:
 gen		generates a password
 get		retrieves a password from the local sqlite db and prints it out
@@ -29,7 +30,6 @@ import		imports passwords from a csv file into the local sqlite db
 help		show help
 
 Use psgen <command> -h or --help for more information about a command.`)
-
 }
 
 func (c *Cli) formatError(msg string, err error) string {

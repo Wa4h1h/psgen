@@ -25,7 +25,7 @@ func ReadAllCsv(path string, delim rune) ([][]string, error) {
 }
 
 func WriteToCsv(header []string, body [][]string, path string, delim rune) error {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return fmt.Errorf("creating csv file error: %w", err)
 	}

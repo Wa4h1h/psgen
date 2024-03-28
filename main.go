@@ -3,11 +3,12 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/Wa4h1h/psgen/internal/generator"
 	"github.com/Wa4h1h/psgen/internal/store"
 	_ "github.com/mattn/go-sqlite3"
-	"os"
-	"time"
 )
 
 func main() {
