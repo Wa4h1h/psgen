@@ -45,7 +45,16 @@ help            show help
 Use psgen <command> -h or --help for more information about a command.
 ```
 
+### install
+````bash
+go install github.com/Wa4h1h/psgen@latest
+````
+
 ### Run
+Execute
+```bash
+psgen <command> -[-]<flags>
+```
 Execute using go command
 ```bash
 $ go run main.go <command> -[-]<flags>
